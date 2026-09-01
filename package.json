@@ -1,0 +1,30 @@
+{
+  "name": "tilda-edit-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for Tilda's undocumented editor write API, authenticated via the local Firefox session cookie.",
+  "type": "module",
+  "bin": {
+    "tilda-edit-mcp": "index.mjs"
+  },
+  "scripts": {
+    "test": "node contract-test.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "MIT",
+  "author": "Dmitry Kvasnikov",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Dreamkeeper/tilda-edit-mcp.git"
+  },
+  "keywords": [
+    "mcp",
+    "tilda",
+    "model-context-protocol",
+    "tilda-publishing"
+  ]
+}
