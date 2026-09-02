@@ -21,6 +21,8 @@ import {
   renderBlock,
   readRows,
   writeRows,
+  listRecords,
+  setBlockVisibility,
   publishPage,
 } from './tilda-api.mjs';
 
@@ -91,6 +93,32 @@ const tools = [
       required: ['pageid', 'recordid', 'rows'],
     },
     run: (a) => writeRows(a.pageid, a.recordid, a.rows),
+  },
+  {
+    name: 'list_records',
+    description:
+      "List a page's blocks in order, plus its page info. Returns { page:{title,alias,descr,published}, records:[{recordid,tplid,code,off}] }. off=true means hidden. This is the headless way to enumerate a page's record IDs before editing.",
+    inputSchema: {
+      type: 'object',
+      properties: { pageid: { type: 'string' } },
+      required: ['pageid'],
+    },
+    run: (a) => listRecords(a.pageid),
+  },
+  {
+    name: 'set_block_visibility',
+    description:
+      "Show or hide a block (idempotent). Pass visible:true to show, false to hide. Reads current state and toggles only if needed. Use to hide booking/price blocks until dates are confirmed, or reveal them later.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        pageid: { type: 'string' },
+        recordid: { type: 'string' },
+        visible: { type: 'boolean' },
+      },
+      required: ['pageid', 'recordid', 'visible'],
+    },
+    run: (a) => setBlockVisibility(a.pageid, a.recordid, a.visible),
   },
   {
     name: 'publish_page',

@@ -98,6 +98,57 @@ export async function readRows(pageid, recordid) {
 export async function writeRows(pageid, recordid, rows) {
   return writeBlock(pageid, recordid, { list: JSON.stringify(rows) });
 }
+/**
+ * List a page's blocks (records) plus its page-level info — the headless
+ * equivalent of opening the editor to read the structure.
+ * Returns { page:{title,alias,descr,published}, records:[{recordid,tplid,code,off}] }
+ * in on-page order. `off:true` means the block is hidden.
+ */
+export async function listRecords(pageid) {
+  const text = await tildaPost('/page/get/getpage/', pageid, { pageid });
+  let json;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    throw new Error('listRecords: response was not JSON: ' + text.slice(0, 160));
+  }
+  const records = (json.records || []).map((r) => {
+    const h = String(r.html || '');
+    return {
+      recordid: (h.match(/recordid=["']?(\d+)/) || [])[1] || null,
+      tplid: r.tplid,
+      code: (h.match(/data-record-cod=["']?([A-Za-z0-9]+)/) || [])[1] || null,
+      off: /\boff=["']?y/.test(h),
+    };
+  });
+  const pg = json.page || {};
+  return {
+    page: { title: pg.title, alias: pg.alias, descr: pg.descr, published: pg.published },
+    records,
+  };
+}
+
+/**
+ * Show or hide a block. `offrecord` is a server-side TOGGLE with no on/off flag,
+ * so we read the current state first and toggle only when it differs from the
+ * requested one — making this idempotent. Returns { recordid, visible }.
+ */
+export async function setBlockVisibility(pageid, recordid, visible) {
+  const before = await listRecords(pageid);
+  const rec = before.records.find((r) => r.recordid === String(recordid));
+  if (!rec) throw new Error(`setBlockVisibility: record ${recordid} not found on page ${pageid}`);
+
+  if (!rec.off !== visible) {
+    // offrecord is a toggle; it replies with the new off-state ("y"/"n"), not "OK".
+    // Don't gate on the reply text — verify the result by re-reading the page.
+    await tildaPost('/page/submit/', pageid, { comm: 'offrecord', pageid, recordid });
+    const after = await listRecords(pageid);
+    const now = after.records.find((r) => r.recordid === String(recordid));
+    if (!now || !now.off !== visible) throw new Error('setBlockVisibility: toggle did not take effect');
+  }
+  return { recordid: String(recordid), visible };
+}
+
 
 export async function publishPage(pageid) {
   const editorHtml = await tildaGet(`/page/?pageid=${pageid}`, pageid);

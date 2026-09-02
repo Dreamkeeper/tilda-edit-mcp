@@ -26,6 +26,8 @@ a read-modify-write-verify wrapper so a save either provably lands or throws.
 | `render_block`| Rendered HTML for one block |
 | `read_rows`   | A repeatable block's rows as an array (decodes Tilda's escaped `list` JSON) |
 | `write_rows`  | Replace a repeatable block's rows |
+| `list_records`| List a page's blocks in order (recordid, tplid, code, hidden?) + page title/alias/descr. Enumerate a page headlessly. |
+| `set_block_visibility` | Show/hide a block (idempotent). Hide booking/price blocks until dates are set, reveal them later. |
 | `publish_page`| Publish a page — **browser-assisted only** (see Caveats) |
 
 A block is a handful of scalar fields plus one `list` JSON blob holding every
@@ -97,10 +99,12 @@ touches.
   Tilda's ToS. Check before relying on it, especially commercially.
 - **Session coupling.** Logging out of Tilda in any browser invalidates the
   account's sessions globally.
-- **Publishing needs a browser.** All edits (read/write/render/rows) work
-  headlessly, but the publish endpoint requires a CSRF token that Tilda
-  generates client-side (the meta ships empty). Publish from a browser context
-  or the Tilda UI; everything you edited via the MCP is already saved as a draft.
+- **State-changing "dangerous" ops need a browser.** Reads and content edits
+  (read/write/render/rows/list/visibility) work headlessly. But **publish**,
+  **delete-page** and **page-settings save** (title/alias) require a CSRF token
+  Tilda generates client-side — the `<meta name="csrf">` ships empty. Do those in
+  a browser context or the Tilda UI. Everything the MCP edits is saved as a draft
+  regardless, so only the final publish needs the browser.
 
 ## License
 
