@@ -26,7 +26,7 @@ a read-modify-write-verify wrapper so a save either provably lands or throws.
 | `render_block`| Rendered HTML for one block |
 | `read_rows`   | A repeatable block's rows as an array (decodes Tilda's escaped `list` JSON) |
 | `write_rows`  | Replace a repeatable block's rows |
-| `publish_page`| Publish a page (fetches the CSRF token itself) |
+| `publish_page`| Publish a page — **browser-assisted only** (see Caveats) |
 
 A block is a handful of scalar fields plus one `list` JSON blob holding every
 repeatable row. `tplid` is the block type; `width12` the column width;
@@ -97,6 +97,10 @@ touches.
   Tilda's ToS. Check before relying on it, especially commercially.
 - **Session coupling.** Logging out of Tilda in any browser invalidates the
   account's sessions globally.
+- **Publishing needs a browser.** All edits (read/write/render/rows) work
+  headlessly, but the publish endpoint requires a CSRF token that Tilda
+  generates client-side (the meta ships empty). Publish from a browser context
+  or the Tilda UI; everything you edited via the MCP is already saved as a draft.
 
 ## License
 

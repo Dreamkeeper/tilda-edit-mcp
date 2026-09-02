@@ -57,10 +57,17 @@ export async function readBlock(pageid, recordid, tab = 'content') {
 export async function writeBlock(pageid, recordid, changes, tab = 'content') {
   const current = await readBlock(pageid, recordid, tab);
   const body = { comm: 'saverecord', pageid, recordid };
+  const encode = (v) => {
+    if (v == null) return '';
+    // Array/object fields (e.g. a cart block's `json` receiver hashes) must be
+    // JSON-serialised; String() would mangle them into "[object Object]" / CSV.
+    if (typeof v === 'object') return JSON.stringify(v);
+    return String(v);
+  };
   for (const [k, v] of Object.entries(current)) {
-    if (!READONLY.has(k)) body[k] = v == null ? '' : String(v);
+    if (!READONLY.has(k)) body[k] = encode(v);
   }
-  for (const [k, v] of Object.entries(changes)) body[k] = v == null ? '' : String(v);
+  for (const [k, v] of Object.entries(changes)) body[k] = encode(v);
 
   const res = await tildaPost('/page/submit/', pageid, body);
   if (res.trim() !== 'OK') throw new Error('writeBlock: unexpected response: ' + res.slice(0, 160));
@@ -94,12 +101,23 @@ export async function writeRows(pageid, recordid, rows) {
 
 export async function publishPage(pageid) {
   const editorHtml = await tildaGet(`/page/?pageid=${pageid}`, pageid);
-  const m = editorHtml.match(/<meta[^>]+name=["']csrf["'][^>]+content=["']([^"']+)["']/i);
-  if (!m) throw new Error('publishPage: could not find CSRF token in editor page');
+  // The csrf <meta> ships EMPTY (content="") — Tilda's editor fills it client-side
+  // via getCSRF(), so a standalone process cannot obtain it. Publishing therefore
+  // has to happen in a browser context (the in-page client, or Tilda's UI).
+  const tag = editorHtml.match(/<meta[^>]*name=["']csrf["'][^>]*>/i);
+  const token = tag && tag[0].match(/content=["']([^"']+)["']/i);
+  if (!token) {
+    throw new Error(
+      'publish is not supported from the standalone MCP: the CSRF token is ' +
+        'generated client-side and is empty in the fetched HTML. Publish via the ' +
+        'in-page client (window.Tilda.publishPage) or the Tilda editor UI. ' +
+        'All edits made through this MCP are saved; only the final publish needs a browser.'
+    );
+  }
   const text = await tildaPost('/page/publish/', pageid, {
     comm: 'pagepublish',
     pageid,
-    csrf: m[1],
+    csrf: token[1],
     returnjson: 'yes',
   });
   try {

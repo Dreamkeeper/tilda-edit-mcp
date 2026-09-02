@@ -145,6 +145,7 @@ export async function tildaGet(path, pageid) {
     headers: {
       'User-Agent': UA,
       Referer: `${BASE}/`,
+      'X-Requested-With': 'XMLHttpRequest',
       Cookie: cookieHeader(),
     },
   });
