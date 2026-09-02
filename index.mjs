@@ -24,6 +24,12 @@ import {
   listRecords,
   setBlockVisibility,
   publishPage,
+  duplicatePage,
+  setPageTitle,
+  setPageAlias,
+  addBlock,
+  deleteBlock,
+  setBlockImageFrom,
 } from './tilda-api.mjs';
 
 const tools = [
@@ -122,7 +128,7 @@ const tools = [
   },
   {
     name: 'publish_page',
-    description: 'Publish a page (makes changes public). Returns {link,…}. Fetches the CSRF token itself.',
+    description: 'Publish a page (makes changes public). Returns {link,…}. Works headlessly — Tilda accepts an empty CSRF token here.',
     inputSchema: {
       type: 'object',
       properties: { pageid: { type: 'string' } },
@@ -130,10 +136,79 @@ const tools = [
     },
     run: (a) => publishPage(a.pageid),
   },
+  {
+    name: 'duplicate_page',
+    description:
+      'Duplicate a page inside its project (same as the dashboard "Duplicate"). Returns {pageid} of the copy — titled "Copy of …", no alias, unpublished. Use set_page_title / set_page_alias next.',
+    inputSchema: { type: 'object', properties: { pageid: { type: 'string' } }, required: ['pageid'] },
+    run: (a) => duplicatePage(a.pageid),
+  },
+  {
+    name: 'set_page_title',
+    description: "Rename a page (the dashboard/editor title, also the <title>).",
+    inputSchema: {
+      type: 'object',
+      properties: { pageid: { type: 'string' }, title: { type: 'string' } },
+      required: ['pageid', 'title'],
+    },
+    run: (a) => setPageTitle(a.pageid, a.title),
+  },
+  {
+    name: 'set_page_alias',
+    description: "Set a page's URL alias (the path after the domain). Needs the projectid too.",
+    inputSchema: {
+      type: 'object',
+      properties: { pageid: { type: 'string' }, projectid: { type: 'string' }, alias: { type: 'string' } },
+      required: ['pageid', 'projectid', 'alias'],
+    },
+    run: (a) => setPageAlias(a.pageid, a.projectid, a.alias),
+  },
+  {
+    name: 'add_block',
+    description:
+      "Add a new block of type `tplid` (Tilda's numeric block-library id, e.g. 160 = IM02 full-screen image, 30 = TL02 title+text, 127 = TX02 text, 792 = PL305 price) after `afterid` or before `beforeid`. Returns {recordid}. The block comes with the library's placeholder content — write_block it next.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        pageid: { type: 'string' },
+        tplid: { type: 'string' },
+        afterid: { type: 'string' },
+        beforeid: { type: 'string' },
+      },
+      required: ['pageid', 'tplid'],
+    },
+    run: (a) => addBlock(a.pageid, a.tplid, { afterid: a.afterid || '', beforeid: a.beforeid || '' }),
+  },
+  {
+    name: 'delete_block',
+    description: 'Delete a block from a page. Irreversible from the API (the editor keeps an undo buffer; this does not).',
+    inputSchema: {
+      type: 'object',
+      properties: { pageid: { type: 'string' }, recordid: { type: 'string' } },
+      required: ['pageid', 'recordid'],
+    },
+    run: (a) => deleteBlock(a.pageid, a.recordid),
+  },
+  {
+    name: 'set_block_image',
+    description:
+      "Change a block's image. `source` is an http(s) URL or a local file path; it is uploaded to Tilda's CDN and assigned to `field` (default `img`) the way the editor's uploader does. Plain write_block cannot change image fields — use this.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        pageid: { type: 'string' },
+        recordid: { type: 'string' },
+        source: { type: 'string' },
+        field: { type: 'string', default: 'img' },
+      },
+      required: ['pageid', 'recordid', 'source'],
+    },
+    run: (a) => setBlockImageFrom(a.pageid, a.recordid, a.field || 'img', a.source),
+  },
 ];
 
 const server = new Server(
-  { name: 'tilda-edit', version: '1.0.0' },
+  { name: 'tilda-edit', version: '1.1.0' },
   { capabilities: { tools: {} } }
 );
 

@@ -1,6 +1,6 @@
 {
   "name": "tilda-edit-mcp",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "MCP server for Tilda's undocumented editor write API, authenticated via the local Firefox session cookie.",
   "type": "module",
   "bin": {
