@@ -47,10 +47,20 @@ export function readTildaCookies() {
   const dir = mkdtempSync(join(tmpdir(), 'tilda-ck-'));
   const dst = join(dir, 'c.sqlite');
   try {
-    copyFileSync(src, dst);
-    for (const ext of ['-wal', '-shm']) {
-      if (existsSync(src + ext)) copyFileSync(src + ext, dst + ext);
-    }
+    // Firefox briefly locks these files while writing (EBUSY on Windows), so
+    // retry the db and WAL; the -shm index is optional — SQLite rebuilds it.
+    const copyRetry = (from, to) => {
+      for (let i = 0; ; i++) {
+        try { return copyFileSync(from, to); }
+        catch (e) {
+          if (e.code !== 'EBUSY' || i >= 9) throw e;
+          Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 150);
+        }
+      }
+    };
+    copyRetry(src, dst);
+    if (existsSync(src + '-wal')) copyRetry(src + '-wal', dst + '-wal');
+    if (existsSync(src + '-shm')) { try { copyFileSync(src + '-shm', dst + '-shm'); } catch { /* optional */ } }
     const db = new DatabaseSync(dst, { readOnly: true });
     // Scope the query to tilda hosts only — we never pull other sites' cookies.
     const rows = db
