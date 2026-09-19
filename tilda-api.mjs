@@ -99,7 +99,32 @@ export async function readRows(pageid, recordid) {
 }
 
 export async function writeRows(pageid, recordid, rows) {
+  const current = await readBlock(pageid, recordid);
+  // Form blocks (carts, lead forms: they carry `formactiontype`) ignore `list` on
+  // save. The editor sends the fields as `forminputs` JSON instead, plus the
+  // form type and receivers under record-suffixed keys (captured 19 Sept 2026).
+  if (current.formactiontype !== undefined) return writeFormInputs(pageid, recordid, rows, current);
   return writeBlock(pageid, recordid, { list: JSON.stringify(rows) });
+}
+
+async function writeFormInputs(pageid, recordid, rows, current) {
+  const body = { comm: 'saverecord', pageid, recordid };
+  for (const [k, v] of Object.entries(current)) {
+    if (['id', 'pageid', 'tplid', 'slideqty', 'list', 'json', 'formactiontype'].includes(k)) continue;
+    body[k] = typeof v === 'string' ? decodeEntities(v) : JSON.stringify(v);
+  }
+  body[`formactiontype${recordid}`] = String(current.formactiontype);
+  // Receivers (`json`: array of integration hashes) must be echoed or they are dropped.
+  (Array.isArray(current.json) ? current.json : []).forEach((h, i) => (body[`formintegrations${recordid}[${i}]`] = h));
+  body.forminputs = JSON.stringify(rows);
+  const res = (await tildaPost('/page/submit/', pageid, body)).trim();
+  if (res !== 'OK') throw new Error('writeFormInputs: unexpected response: ' + res.slice(0, 160));
+  const after = await readBlock(pageid, recordid);
+  if (canon(after.list) !== canon(JSON.stringify(rows)) && rowsFromList(after.list).length !== rows.length)
+    throw new Error('writeFormInputs: fields did not persist');
+  if (JSON.stringify(after.json || []) !== JSON.stringify(current.json || []))
+    throw new Error('writeFormInputs: form receivers changed — check the block in the editor');
+  return after;
 }
 /**
  * List a page's blocks (records) plus its page-level info — the headless

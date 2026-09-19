@@ -63,6 +63,12 @@ typography per field; `filteropacity` the cover overlay.
 - **Rich-text fields reject `<ul>`/`<li>`/`<div>`.** Posting a `<ul>` once
   returned a login page and invalidated the session for every client, Firefox
   included. Use `•  item<br />` for lists.
+- **Form blocks (carts, lead forms) ignore `list` on save.** The editor sends
+  their fields as `forminputs` JSON, with the form type and receivers under
+  record-suffixed keys (`formactiontype<recordid>`,
+  `formintegrations<recordid>[]`). `write_rows` detects form blocks and uses
+  that format, echoing the receivers so none are dropped — e.g. to add or fix a
+  cart's hidden «Тренинг» field.
 - **Legacy scalar colour fields** (`buttoncolor`, `bbuttonbgcolor`,
   `title_uppercase`, …) are derived or dropped by the server; set the
   `*_styles` / `*_typo` JSON instead.
