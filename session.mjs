@@ -123,7 +123,9 @@ export async function tildaPost(path, pageid, fields, _retried = false) {
 
   if (!res.ok) throw new Error(`${path} -> HTTP ${res.status}: ${text.slice(0, 160)}`);
 
-  if (/not authorized/i.test(text)) {
+  // Two shapes of "logged out": an XHR-style "not authorized" string, or Tilda's
+  // full login page (<title>Авторизация - Tilda</title>) served in place of JSON.
+  if (/not authorized/i.test(text) || /<title>\s*(Авторизация|Authorization|Log ?in)[^<]*Tilda/i.test(text)) {
     if (!_retried) {
       // Session died; forget it and re-bootstrap once from the remember-me token.
       sessionJar = {};
