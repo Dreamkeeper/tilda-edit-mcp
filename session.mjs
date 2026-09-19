@@ -96,7 +96,22 @@ function captureSetCookies(res) {
   if (changed) saveSessionJar();
 }
 
-const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:155.0) Gecko/20100101 Firefox/155.0';
+// Tilda ties the session to the browser signature, so the UA must match the
+// Firefox that owns the session. Read the installed version instead of
+// hardcoding it — a silent Firefox auto-update otherwise logs the client out.
+function firefoxMajor() {
+  for (const dir of [process.env.TILDA_FIREFOX_DIR, 'C:/Program Files/Mozilla Firefox', 'C:/Program Files (x86)/Mozilla Firefox']) {
+    try {
+      if (!dir) continue;
+      const ini = readFileSync(join(dir, 'application.ini'), 'utf8');
+      const m = ini.match(/^Version=(\d+)/m);
+      if (m) return m[1];
+    } catch { /* try next */ }
+  }
+  return '156';
+}
+const FFV = firefoxMajor();
+const UA = `Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:${FFV}.0) Gecko/20100101 Firefox/${FFV}.0`;
 const BASE = 'https://tilda.ru';
 
 /**
