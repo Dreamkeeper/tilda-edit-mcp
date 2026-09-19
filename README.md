@@ -85,8 +85,15 @@ typography per field; `filteropacity` the cover overlay.
    the `Origin`/`Referer`/`X-Requested-With` headers Tilda's origin check
    requires. The session is then stable across calls.
 
+5. Tilda ties the session to the browser signature, so the `User-Agent` is
+   built from the **installed Firefox version** (read from `application.ini`;
+   set `TILDA_FIREFOX_DIR` if Firefox lives elsewhere). A hardcoded version
+   silently logs the client out the day Firefox auto-updates.
+
 **You must be logged in to tilda.ru in Firefox** for the server to work. If a
 call returns "Tilda rejected the session", log in again in Firefox and retry.
+Restart your MCP client after updating this server — a running server keeps
+the old code.
 
 ## Requirements
 
