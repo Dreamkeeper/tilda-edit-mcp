@@ -119,8 +119,20 @@ const BASE = 'https://tilda.ru';
  * session jar and retry once — that re-bootstraps from the remember-me token,
  * the single legitimate moment to present it.
  */
+// Tilda revokes the account's sessions (in every browser) after a burst of
+// rapid editor requests — observed repeatedly on 19–21 Sept 2026 at ~30+
+// requests within a few seconds. Pace every call; override with TILDA_MIN_GAP_MS.
+const MIN_GAP_MS = Number(process.env.TILDA_MIN_GAP_MS || 1500);
+let lastCallAt = 0;
+async function pace() {
+  const wait = lastCallAt + MIN_GAP_MS - Date.now();
+  if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+  lastCallAt = Date.now();
+}
+
 export async function tildaPost(path, pageid, fields, _retried = false) {
   ensureBase();
+  await pace();
   const res = await fetch(BASE + path, {
     method: 'POST',
     headers: {
@@ -141,8 +153,11 @@ export async function tildaPost(path, pageid, fields, _retried = false) {
   // Two shapes of "logged out": an XHR-style "not authorized" string, or Tilda's
   // full login page (<title>Авторизация - Tilda</title>) served in place of JSON.
   if (/not authorized/i.test(text) || /<title>\s*(Авторизация|Authorization|Log ?in)[^<]*Tilda/i.test(text)) {
-    if (!_retried) {
-      // Session died; forget it and re-bootstrap once from the remember-me token.
+    // Re-bootstrapping from the remember-me token appears to make Tilda revoke
+    // the account's sessions everywhere (observed 19-21 Sept 2026: Firefox and
+    // Chrome logged out the moment this client hit a login page). So never do it
+    // automatically; opt in with TILDA_REBOOTSTRAP=1 if you know what you're doing.
+    if (!_retried && process.env.TILDA_REBOOTSTRAP === '1') {
       sessionJar = {};
       saveSessionJar();
       return tildaPost(path, pageid, fields, true);
