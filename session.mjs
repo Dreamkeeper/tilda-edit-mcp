@@ -153,11 +153,11 @@ export async function tildaPost(path, pageid, fields, _retried = false) {
   // Two shapes of "logged out": an XHR-style "not authorized" string, or Tilda's
   // full login page (<title>Авторизация - Tilda</title>) served in place of JSON.
   if (/not authorized/i.test(text) || /<title>\s*(Авторизация|Authorization|Log ?in)[^<]*Tilda/i.test(text)) {
-    // Re-bootstrapping from the remember-me token appears to make Tilda revoke
-    // the account's sessions everywhere (observed 19-21 Sept 2026: Firefox and
-    // Chrome logged out the moment this client hit a login page). So never do it
-    // automatically; opt in with TILDA_REBOOTSTRAP=1 if you know what you're doing.
-    if (!_retried && process.env.TILDA_REBOOTSTRAP === '1') {
+    // A long-running server can hold a stale cached PHPSESSID in its session jar,
+    // which overrides the fresh one recovered from Firefox. Drop the jar and retry
+    // once. (Session loss on 19–21 Sept 2026 came from request bursts, not from
+    // this retry; calls are paced now.)
+    if (!_retried) {
       sessionJar = {};
       saveSessionJar();
       return tildaPost(path, pageid, fields, true);
