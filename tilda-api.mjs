@@ -103,7 +103,11 @@ export async function writeRows(pageid, recordid, rows) {
   // Form blocks (carts, lead forms: they carry `formactiontype`) ignore `list` on
   // save. The editor sends the fields as `forminputs` JSON instead, plus the
   // form type and receivers under record-suffixed keys (captured 19 Sept 2026).
-  if (current.formactiontype !== undefined) return writeFormInputs(pageid, recordid, rows, current);
+  // `formactiontype` alone is not enough: content blocks such as TM301 / TL02 carry it
+  // too (as "0"/"1"), so also require form-input rows (`li_type`: nm, em, ph, in, pc, hd…).
+  const isForm = current.formactiontype !== undefined &&
+    [...rows, ...rowsFromList(current.list)].some((r) => r && r.li_type !== undefined);
+  if (isForm) return writeFormInputs(pageid, recordid, rows, current);
   return writeBlock(pageid, recordid, { list: JSON.stringify(rows) });
 }
 
