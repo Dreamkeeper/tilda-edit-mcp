@@ -18,7 +18,7 @@ const READONLY = new Set(['id', 'pageid', 'tplid', 'slideqty', 'formactiontype']
 function decodeEntities(s) {
   return String(s)
     .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
+    .replace(/&#0*39;/g, "'") // T123 `code` comes back as &#039;
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&amp;/g, '&');
